@@ -1,0 +1,10 @@
+# ResNet-101 支路（torchvision 预训练，无单独权重文件）
+# 主干在优化器中的 lr（显式，与 --lr 解耦；未设时回退 --lr_backbone）。用 main-.py 且与旧 5e-5 统一时可写 5.0e-5
+name: res
+backbone_lr: 5.0e-5
+model_path: models.resnet101.Resnet
+weights_path: resnet101-63fe2227.pth
+pretrained: true
+channel_align: false
+native_mode: true
+# stage_channels: [256, 512, 1024, 2048]

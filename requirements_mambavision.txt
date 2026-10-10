@@ -1,0 +1,4 @@
+# MambaVision backbone 依赖（替换 MiT 时需安装）
+mambavision>=1.0.0
+mamba-ssm
+einops

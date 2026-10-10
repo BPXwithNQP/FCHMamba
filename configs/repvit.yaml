@@ -1,0 +1,13 @@
+# RepViT-M1.5（THU-MIG ImageNet-1K distill）；native_mode=true 时输出 [64,128,256,512]
+# 权重：repvit_m1_5_distill_450e.pth（放 主干网络内容/ 下，见 configs 注释）
+# 主干 lr 见 backbone_lr；与 ConvNeXt 支路一致时可写 5.0e-5
+name: repvit
+backbone_lr: 5.0e-5
+freeze: 0  # 训练初期冻结本主干参数的 epoch 数，0=不冻结
+model_path: models.repvit_backbone.RepViTBackbone
+weights_path: repvit_m1_5_ade20k.pth
+pretrained: true
+channel_align: true
+native_mode: false
+variant: m1_5
+stage_channels: [64, 128, 256, 512]

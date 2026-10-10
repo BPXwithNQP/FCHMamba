@@ -1,0 +1,9 @@
+# ResNet-50 单主干（torchvision 预训练，无单独权重文件）
+name: res50
+backbone_lr: 5.0e-5
+model_path: models.resnet101.Resnet
+weights_path: resnet50-0676ba61.pth
+pretrained: true
+channel_align: true
+native_mode: false
+variant: 50

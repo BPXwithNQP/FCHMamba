@@ -1,0 +1,11 @@
+# SegFormer MiT-B4，与 FusedHE 默认 fusion 对齐通道 [64,128,320,512]
+# weights_path 为相对于 backbone_content_dir（默认 项目/主干网络内容）的相对路径
+# 主干 lr 见 backbone_lr；用 main-.py 且需 5e-5 时改为 5.0e-5
+name: mit
+backbone_lr: 5.0e-5
+model_path: models.mit.mit_b4
+weights_path: mit_b4.pth
+pretrained: true
+channel_align: true
+native_mode: false
+stage_channels: [64, 128, 320, 512]

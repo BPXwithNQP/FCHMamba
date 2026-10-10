@@ -1,0 +1,12 @@
+# MambaVision：variant=tiny_ade20k 为 Tiny+ADE20K；base_1k 为 Base+ImageNet-1K
+# weights_path 指向 backbone_content_dir 下预训练文件（已链接到项目根同名 pth 时可省略子目录）
+# 主干 lr 见 backbone_lr；用 main-.py 且需 5e-5 时改为 5.0e-5
+name: MambaVision
+backbone_lr: 5.0e-5
+model_path: models.mambavision_seg.MambaVisionTinyBackbone
+weights_path: mamba_vision_160k_ade20k-512x512_tiny.pth
+variant: tiny_ade20k
+pretrained: true
+channel_align: true
+native_mode: false
+stage_channels: [64, 128, 320, 512]

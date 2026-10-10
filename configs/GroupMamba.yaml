@@ -1,0 +1,15 @@
+# GroupMamba-base（源码：主干网络内容/GroupMamba-main/classification/models/groupmamba.py）
+# 用于 encoder2；四级输出经 1×1 对齐到 MiT [64,128,320,512]。需编译 GroupMamba 的 selective_scan CUDA 扩展。
+# 预训练权重（EMA）：groupmamba_base_ema.pth
+# 主干 lr 见 backbone_lr；用 main-.py 且需 5e-5 时改为 5.0e-5
+name: GroupMamba
+backbone_lr: 5.0e-5
+freeze: 0  # 训练初期冻结本主干「预训练部分」的 epoch 数；0=不冻结。仅冻 patch_embed/blocks/norm，adapters/RGHF/FDGM 新增分支不冻
+model_path: models.groupmamba_backbone.GroupMambaFusedBackbone
+weights_path: groupmamba_base_ema.pth
+pretrained: true
+channel_align: true
+native_mode: true
+variant: base
+# groupmamba_base 各 stage 通道，供对齐层使用（与 groupmamba.py 中 embed_dims 一致）
+stage_channels: [96, 192, 424, 512]

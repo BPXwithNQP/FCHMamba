@@ -1,0 +1,20 @@
+# EfficientVMamba（Backbone_EfficientVSSM-base），用于 encoder2；输出经 1×1 对齐到 MiT [64,128,320,512]
+# 源码：主干网络内容/EfficientVMamba-main/classification；需编译 selective_scan CUDA 扩展
+# 主干 lr 见 backbone_lr；用 main-.py 且需 5e-5 时改为 5.0e-5
+name: EfficientVMamba
+backbone_lr: 5.0e-5
+model_path: models.efficient_vmamba_backbone.EfficientVMambaFusedBackbone
+weights_path: efficient_vmamba_base.ckpt
+pretrained: true
+channel_align: true
+native_mode: false
+variant: base
+depths: [2, 2, 9, 2]
+embed_dim: 96
+d_state: 16
+ssm_ratio: 2.0
+drop_path_rate: 0.2
+downsample_version: v1
+mlp_ratio: 0.0
+step_size: 2
+stage_channels: [64, 128, 320, 512]

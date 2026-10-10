@@ -4,17 +4,15 @@
 
 [English](README.md) · [GitHub](https://github.com/BPXwithNQP/FCHMamba)
 
-**农启霈**<sup>1,†</sup>、**李政蓬**<sup>2,†</sup>、**高政**<sup>3</sup>、**管伟春**<sup>1</sup>、**李姝娴**<sup>1</sup>、**张一凡**<sup>1</sup>、**张媛媛**<sup>1,*</sup>、**胡军**<sup>2,*</sup>
+**农启霈**<sup>1,†</sup>、**李政蓬**<sup>1,2,†</sup>、**高政**<sup>3</sup>、**管伟春**<sup>1</sup>、**李姝娴**<sup>1</sup>、**张一凡**<sup>1</sup>、**张媛媛**<sup>1,*</sup>、**胡军**<sup>2,**</sup>
 
 <sup>1</sup> 辽宁科技大学计算机与软件工程学院，中国辽宁鞍山，114051  
 <sup>2</sup> 辽宁科技大学电子与信息工程学院，中国辽宁鞍山，114051  
 <sup>3</sup> School of Computer Science and Engineering, University of New South Wales, Sydney, NSW 2052, Australia
 
-<sup>†</sup> 共同第一作者。<sup>*</sup> 通讯作者：[张媛媛](mailto:yuanyuan@ustl.edu.cn)、[胡军](mailto:320083700074@ustl.edu.cn)。
+<sup>†</sup> 共同第一作者。<sup>*</sup> 通讯作者。<sup>**</sup> 共同通讯作者。
 
-李政蓬 ORCID：[0000-0001-8345-1592](https://orcid.org/0000-0001-8345-1592).
-
-> **代码发布计划：论文录用后公开源代码。** 当前仓库仅提供项目介绍与部分实验结果，暂不提供实现代码或模型权重。
+张媛媛 ORCID：[0009-0003-7773-1856](https://orcid.org/0009-0003-7773-1856)。
 
 ## 项目简介
 
@@ -31,6 +29,43 @@ FCHMamba 从单张 RGB 遥感影像预测稠密米制高程图，在单一 VMamb
 | Vaihingen | [ISPRS Vaihingen 数据集](https://www.isprs.org/resources/datasets/benchmarks/UrbanSemLab/2d-sem-label-vaihingen.aspx) |
 | DFC2019 Track 1 | [IEEE GRSS 2019 Data Fusion Contest](https://www.grss-ieee.org/community/technical-committees/2019-ieee-grss-data-fusion-contest/) |
 | DFC2023 Track 2 | [IEEE GRSS 2023 Data Fusion Contest](https://www.grss-ieee.org/community/technical-committees/2023-ieee-grss-data-fusion-contest/) |
+
+## 代码与模型权重
+
+仓库包含 FCHMamba 的模型装配、论文中的三个核心模块、数据与评估工具，以及训练和测试入口。
+
+- `models/model.py`：FCHMamba 模型装配与预测头。
+- `models/Blocks/RGHF.py`：VM-FC 使用的分阶段门控频率补偿。
+- `models/Blocks/DMSN.py`：深层流方向建模。
+- `models/Blocks/GSFB.py`：门控多尺度跳跃融合。
+- `configs/` 与 `models/Blocks/block.yaml`：主干和模块配置。
+- `train_config/`：Vaihingen、DFC2019 和 DFC2023 的训练配置。
+- `train.py`、`test.py`、`utils/` 与 `nqp_utils/`：训练、评估、指标及模型统计工具。
+
+FCHMamba 训练权重可从[百度网盘](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026)下载，提取码：`2026`。
+
+### 环境配置
+
+代码基于 Python 3.10 与支持 CUDA 的 PyTorch 开发。请根据本机 CUDA 环境安装依赖：
+
+```bash
+pip install -r requirements_rest.txt
+pip install -r requirements_mambavision.txt
+```
+
+状态空间主干需要对应的 selective-scan CUDA 实现。运行前请修改 `train_config/*.yaml` 中的数据集路径。
+
+### 训练与测试
+
+```bash
+# 示例：在 DFC2023 上训练
+python main.py --config train_config/dfc2023.yaml --dataset_root /path/to/datasets
+
+# 使用下载的权重进行测试
+python test.py --config train_config/dfc2023.yaml \
+  --ckpt_path /path/to/FCHMamba.ckpt \
+  --test_dir /path/to/test/data
+```
 
 ## 模型对比：三个数据集的 RMSE
 
@@ -128,9 +163,8 @@ HF/LF 是频率响应统计量，不是预测精度指标。上述统计使用�
 
 ## 发布状态
 
-- **源代码：** 论文录用后公开。
-- **模型权重：** 暂未公开。
-- **训练与评估说明：** 随代码发布。
+- **源代码：** 已在本仓库提供。
+- **模型权重：** [百度网盘](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026)，提取码 `2026`。
 - **论文与引用：** 发表信息和引用条目将在可用时补充。
 
 本仓库不重新分发基准数据集，数据获取与使用遵循相应提供方的条款。
@@ -142,6 +176,10 @@ HF/LF 是频率响应统计量，不是预测精度指标。上述统计使用�
 ## 致谢
 
 感谢 DGPF 提供 Vaihingen 数据，以及 IEEE GRSS 2019 和 2023 Data Fusion Contest 的数据提供方与组织方。
+
+## 许可证
+
+仓库中包含基于 FusedHE 与 SegFormer 的组件，其科研用途条款和署名要求见 [LICENSE](LICENSE)。
 
 ## 联系方式
 

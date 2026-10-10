@@ -1,0 +1,364 @@
+# Blocks 模块默认参数。
+# 这里的参数会被 FDSF/DPLD 自动加载（在没有传入显式构造参数时）。
+# 顶层 key 与模块类名同名。各字段说明见下：
+
+# ============================================================
+# FDSF —— Frequency-Decoupled Skip Fusion（替代 GSFB）
+# 启用：--use_FDSF True，drop-in 替换 FusedDecoder 中的 DecoderBlock。
+# ============================================================
+FDSF:
+  # 通道门 MLP 中间层压缩比；hidden = max(c // gate_reduction, 16)
+  gate_reduction: 4
+  # 空间门最后一层卷积核大小（奇数）
+  spatial_gate_kernel: 3
+  # 残差 γ*(D+S) 的 γ 初值，与 GSFB 一致，初期保留梯度通路
+  residual_gamma_init: 0.1
+  # γ 是否可学习
+  learnable_residual: true
+  # 是否启用通道门（M_channel）。关掉就退化成「带 refine 的 GSFB」
+  use_channel_gate: true
+  # 是否启用空间门（M_spatial）。两个都关 = 纯加法融合，仅作消融
+  use_spatial_gate: true
+  # 末端是否做 3x3 BN+ReLU refine（推荐 true）
+  use_refine: true
+  
+  use_diff: False
+  use_lite_res_refine: False
+  use_gated_residual: False
+
+
+# ============================================================
+# DMSN —— Directional Mamba Semantic Neck
+# 启用：--use_DMSN 1，仅在 fused decoder 的 ff1(stage4) 输出后、
+# 第一次 upsample 前，对最深层融合特征做方向语义校准。
+# ============================================================
+DMSN:
+  # 1x1 降通道比例；hidden = max(in_channels // reduction, min_hidden)
+  reduction: 4
+  # hidden 通道下限，避免通道过窄导致 selective scan 表达不足
+  min_hidden: 64
+  # 残差注入初值：F4' = F4 + gamma * DMSN(F4)
+  gamma_init: 0.05
+  # true：水平正反向共享一个 scan，垂直正反向共享一个 scan，参数更轻
+  share_direction_mamba: true
+  # selective scan 的状态维度
+  d_state: 16
+  # Mamba 内部扩张倍率
+  expand: 2
+  # 单方向 Mamba/SSM 输出后的轻量 dropout，只作用于方向建模残差分支
+  dropout: 0.05
+  # 最终增强分支 Y 的 DropPath：F4' = F4 + gamma * DropPath(Y)
+  drop_path: 0.05
+
+GSFB:
+  channel_gate: true
+  direction_gate: true
+  # use_FF: 0/false=γ·(D_proj+S_proj) 轻量残差；1/true=原版 DecoderBlock 路径作残差旁路
+  #   ffi_1 ──3×3──→ D ──┐
+  #                      ├── concat ── 3×3 ──→ × γ ──→ 与门控 refine 相加后再 ×2 upsample
+  #   ffi_2 ────────────┘
+  use_FF: false
+
+# ============================================================
+# nFAF —— New Frequency-Aware Fusion v2（drop-in 替换 FeatureFusion / FAFBlock）
+# 启用：--use_nFAF True（优先级高于 --use_FAF）。
+# v2 修复的病根：
+#   1. 对齐容量不足 → CNN 支默认 align_depth=2 个全 3×3（与原 FeatureFusion conv1+conv2 同构）
+#   2. 门控 (1-m) 零和耦合 + 双门相乘压幅值 → 两支独立残差门 w=(1+tanh(s))(1+tanh(c))，
+#      末层 zero-init，初始严格恒等（即初始状态 = 原版 FeatureFusion）
+#   3. α/β/λ 在 cat 模式下被 BN 吸收、不可辨识 → 整体删除
+#   4. 高频差分在 ReLU 后有偏 → 改在 pre-act 带符号特征上做，且为残差注入 γ_h·c_high（γ 从 0 学起）
+# 消融指南：spatial/channel gate 全关 + use_smooth=false ≈ 原版 FeatureFusion 复刻基线
+# ============================================================
+nFAF:
+  # 语义对齐作用的支路：
+  #   cnn  —— 只对 CNN/高频支做多层 3×3 空间语义对齐（与原 FeatureFusion 一致，推荐）
+  #   both —— 两支都做 3×3
+  #   none —— 两支都只用 1×1（退化为「FAF 式对齐」，仅作消融对照）
+  align_mode: cnn
+  # 语义对齐卷积核大小（奇数）
+  align_kernel: 3
+  # 对齐层数：2 = in→in/2→d 两个全 3×3（原版同构，推荐）；1 = 单层 in→d
+  align_depth: 2
+  # 对齐是否用深度可分离卷积：false（推荐）保留完整跨通道混合容量；
+  # true 仅在参数预算紧张时使用（跨通道部分退化回 1×1，对齐能力受限）
+  align_use_dwsep: false
+
+  # 融合方式：
+  #   cat —— 两支拼成 2d 交给 refine 学习组合（鲁棒，推荐）
+  #   add —— 逐元素相加（语义不对齐时易干涉/抵消，仅作消融对照）
+  fusion_mode: cat
+
+  # 残差式门控（两支独立、无零和竞争、zero-init 恒等起步）
+  use_spatial_gate: true
+  use_channel_gate: true
+  # 门控 MLP/中间层压缩比；hidden = max(d // gate_reduction, 16)
+  gate_reduction: 4
+  # 空间门末层卷积核大小（奇数）
+  spatial_gate_kernel: 3
+
+  # 高频残差注入：c_used = c_align + γ_h·(c_pre - AvgPool(c_pre))，差分在 pre-act 上做。
+  # 默认关闭；开启时 γ_h 可学习、初值 smooth_gamma_init
+  use_smooth: false
+  # 高频差分 AvgPool 核大小（奇数）
+  smooth_kernel: 3
+  # γ_h 初值（建议 0.0，从"不注入"开始学）
+  smooth_gamma_init: 0.0
+
+  # 融合后 refine 的 3×3 卷积层数（第一层始终全 3×3，推荐 2）
+  refine_depth: 2
+  # refine 第 2 层起是否用深度可分离卷积省参数（第一层跨支混合永远保持全卷积）
+  refine_tail_dwsep: false
+
+# ============================================================
+# liteFAF —— Lite Frequency-Aware Fusion（真·频域分离的轻量融合）
+# 启用：--use_liteFAF True（优先级高于 --use_nFAF / --use_FAF）。
+# 思路：显式零参数分频（AvgPool 低通 + 差分高频）→ 同频段融合
+#   L = g_low + γ_L·c_low（低频以 Mamba 为主）
+#   H = c_high + γ_H·g_high（高频以 CNN 为主）
+#   out = Refine(cat(L, H))
+# γ 末层 zero-init：初始即"低频取 Mamba、高频取 CNN"的纯分频 cat 融合。
+# ============================================================
+liteFAF:
+  # 对齐卷积核（奇数）；CNN 支用 align_kernel，Mamba/MiT 支固定 1×1
+  align_kernel: 3
+  # CNN 支轻对齐是否深度可分离（true 推荐：DW3×3+PW1×1，线性投影、轻量）
+  align_use_dwsep: true
+  # 强对齐 stage 列表：这些 stage 的 CNN 支改用非线性瓶颈翻译
+  # （Conv1×1(in→d)+BN+ReLU → Conv3×3(d→d)+BN，末层无 ReLU 保符号）。
+  # 依据：γ 注入是逐元素加法，深层两支语义差异大时，纯线性投影翻译不动，
+  # γ 会退化到 0（模块变硬路由）；深层图小，FLOPs 代价可忽略（stage4 参数 +2.3M）。
+  # 置空 [] 即全部用轻对齐（消融对照）
+  strong_align_stages: [3, 4]
+  # 频域分解方式：
+  #   0 —— AvgPool 低通 + 差分（各向同性两带，lp_kernel 生效）
+  #   1 —— 无下采样单层 Haar DWT：LL 低频 + LH/HL/HH 三个方向高频带（无损分解），
+  #        每个方向带独立空间门，band_mix(1×1) 重组（初始=三带求和，恒等起点不变）。
+  #        解决 AvgPool 差分「无方向信息、只有粗略两带」的局限；
+  #        但 Haar 低通仅 2×2 均值，收益取决于两支主干的方向互补性，建议消融对比
+  use_DWT: 0
+  # 低通 AvgPool 核大小（奇数，仅 use_DWT=0 生效）。3 适合深层小图；浅层大图可试 5
+  lp_kernel: 3
+  # 门控中间层压缩比
+  gate_reduction: 4
+  # 高频空间门末层卷积核（奇数）
+  spatial_gate_kernel: 3
+  # refine 层数：第一层全 3×3（跨支/跨频段混合），其后按 refine_tail_dwsep
+  refine_depth: 2
+  # 第 2 层起是否深度可分离（true 推荐，轻量）
+  refine_tail_dwsep: true
+
+# ============================================================
+# GRFA —— Gated Residual Frequency Augmentation
+# 启用：--use_GRFA True（优先级高于 --use_liteFAF / --use_RFAF / --use_nFAF / --use_FAF）。
+# 思路：保留 FeatureFusion 同构 base（可从基线热启动）；
+#      仅从 CNN pre-act 特征提取高频残差，经过空间门 M 与逐通道 gamma 注入：
+#      out = base + gamma * M * edge_residual
+# gamma 默认 0：初始 out == FeatureFusion，适合从已有 FF checkpoint 热启动。
+# 热启动建议见 main--.py 参数：
+#   --warm_start <ckpt> --grfa_train_phase residual  先只训 band_refine/gate/gamma
+#   --warm_start <ckpt> --grfa_train_phase finetune  再解冻 GRFA base、decoder、head 微调
+# ============================================================
+GRFA:
+  # stage 编号：ff4=1 最浅，ff1=4 最深；浅层默认使用更大的低通核
+  shallow_stages: [1, 2]
+  # AvgPool 高频差分核：浅层 5、深层 3
+  shallow_lp_kernel: 5
+  deep_lp_kernel: 3
+  # 频率算子：
+  #   0 —— pre-act AvgPool 低通差分（默认，稳）
+  #   1 —— 无下采样 Haar 三方向高频带，再以 band_mix 初始为三带求和
+  use_haar: 0
+  # 门控中间层压缩比；hidden = max(d // gate_reduction, 16)
+  gate_reduction: 4
+  # 空间门末层卷积核大小（奇数）
+  gate_kernel: 3
+  # 逐通道残差注入 gamma 初值；0 表示严格复刻 base 输出
+  gamma_init: 0.0
+
+# ============================================================
+# RGHF —— Residual Gated High-Frequency（单主干编码器 stage 级高频残差）
+# 启用：在 GroupMamba.yaml 中设置 use_RGHF: true（或 cfg 传入）。
+# 每个 GroupMamba stage 结束后对 NCHW 特征做门控高频残差回补：
+#   out = x + gamma * M * edge_residual
+# gamma 默认 0：初始 out == x，适合预训练主干热启动。
+# ============================================================
+RGHF:
+  # stage 编号：1 最浅，4 最深；浅层默认使用更大的低通核
+  shallow_stages: [1, 2]
+  shallow_lp_kernel: 5
+  deep_lp_kernel: 3
+  # 频率算子：0=AvgPool 差分，1=无下采样 Haar 三方向高频带
+  use_haar: 0
+  # 是否在分频前做 3×3+BN pre-act 投影（推荐 true，与 GRFA 的 pre-act 分频一致）
+  use_pre_conv: 1
+  gate_reduction: 4
+  gate_kernel: 3
+  gamma_init: 0.1
+  use_haar: true
+
+# ============================================================
+# FDGM —— Frequency-Decoupled GroupMamba (FD-RGHF Encoder)
+# 启用：--use_FDGM 1（最高优先级，开启后忽略 enc_opt / encoder1 / encoder2，
+#       直接以 FDGM 单分支编码器 + MitDecoder 启动）。
+# 每个 GroupMamba stage 前：
+#   1) LocalRefiner 残差补充局部高频：x_loc = x + β·Local(x)
+#   2) Laplace 解耦：high = x_loc - LP(x_loc); low = x_loc - ρ·high
+#   3) 低频送原 GroupMamba stage：y_low = GroupMambaStage(low)
+#   4) 高频走 RGHF 边界增强：y_high = high + γ_h·gate·refine(high)
+#   5) 门控残差融合：y = y_low + γ_f·Gate(y_low, y_high)·Proj(y_high)
+# β=ρ=γ_h=γ_f=0（默认）时输出严格退化为原始 GroupMamba，可干净热启动。
+# 主干 variant / weights_path / 预训练 / stage_channels 复用 configs/GroupMamba.yaml；
+# 此处仅配置 FD-RGHF 分支的频域超参数。
+# ============================================================
+FDGM:
+  # ---- 主干（可选覆盖 GroupMamba.yaml；留空则用 configs/GroupMamba.yaml） ----
+  # variant: base
+  # weights_path: groupmamba_base_ema.pth
+  # pretrained: true
+
+  # ---- 1. LocalRefiner（DWConv k×k + BN + GELU + PWConv1×1 + BN） ----
+  # 各 stage 的 depthwise 卷积核（stage1→stage4）。浅层大核聚合纹理/边界，深层小核避免过平滑
+  local_kernels: [7, 7, 5, 3]
+  # 注入强度 β 每 stage 一个可学习标量；0 = 初始不注入（恒等热启动）
+  beta_init: 0.0
+
+  # ---- 2. Laplace 频域解耦 ----
+  # 低通 AvgPool 核大小（奇数，stride=1）；high = x_loc - LP(x_loc)
+  lp_kernel: 5
+  # 解耦强度 ρ 每 stage 一个可学习标量，forward 内 clamp 到 [0, rho_max]
+  # ρ=0 → low=x_loc（不解耦，热启动）；ρ=1 → low=LP(x_loc)（完全低通）
+  rho_init: 0.0
+  rho_max: 1.0
+
+  # ---- 3. 高频 RGHF 边界增强分支 ----
+  # 逐通道残差注入 γ_h 初值；0 → y_high == high（初始不增强）
+  gamma_h_init: 0.0
+  # 高频门控 MLP 压缩比；hidden = max(in_ch // reduction, 16)
+  high_gate_reduction: 4
+  # 高频门控末层卷积核（奇数）
+  high_gate_kernel: 3
+
+  # ---- 4. 门控残差融合 ----
+  # 融合空间门 MLP 压缩比
+  fuse_gate_reduction: 4
+  # 融合空间门末层卷积核（奇数）
+  fuse_gate_kernel: 3
+  # 高频融合强度 γ_f 逐通道初值；0 → y == y_low（严格退化为原 GroupMamba，热启动）
+  gamma_f_init: 0.0
+
+# ============================================================
+# RFAF —— Residual Frequency-Aware Fusion
+# 启用：--use_RFAF 1（仅 enc_opt=fused 生效）。
+# out = base + α·freq；base 为原版 FeatureFusion，freq 为阶段化 DWT 残差补偿。
+# stage1/2：对齐后 CNN 支 → 降通道 → DWT 高频 refine → IDWT → 扩到 2d
+# stage3/4：MiT 支 → 降通道 → DWT 低频 refine → IDWT → 扩到 2d
+# ============================================================
+RFAF:
+  # stage1/2 高频支 DWT 前降通道数（对齐后 CNN 特征 d_s → c_red）
+  high_reduce_channels: 32
+  # stage3/4 低频支 DWT 前降通道数（MiT 特征 d_s → c_red）
+  low_reduce_channels: 64
+  # 走高频残差分支的 stage 编号（ff4=1, ff3=2, ff2=3, ff1=4）
+  high_freq_stages: [1, 2]
+  # 各 stage 残差系数 α 初值（每 stage 独立 Parameter，默认同值）
+  alpha_init: 0.01
+
+# ============================================================
+# DPLD —— Dataset-Prior Local Distribution Head（替代 use_condition）
+# 启用：--use_DPLD 1（或 true）读缓存/pickle；--use_DPLD 2 每次启动遍历 train+val nDSM 在线 quantile。
+# 在 use_HL 开启时也兼容（HL 尾部会改用 DPLD 取代内部高度头）。
+# ============================================================
+DPLD:
+  # bin 总数。第 0 个是 ground bin [0, ground_bin_max_m]，其余按训练集 quantile 在 [ground_bin_max_m, max_height] 上划分
+  n_bins: 256
+  # 推理/训练加权时取概率 top-k 个 bin，重新归一化后再加权 bin center
+  top_k: 3
+  # 地面 bin 的上界（米）。<=该值统一塞入 bin 0，避免 quantile 在 0m 附近产生重复边界
+  ground_bin_max_m: 0.5
+  # 高斯软标签的 sigma（米）。bin center 米制空间下的高斯权重 σ
+  sigma_m: 1.5
+  # 分布约束损失权重（KL(p_pred || q_gauss)）
+  dist_loss_weight: 0.1
+  # bin 分类损失权重（focal + median-freq balanced，clamp 到 [0.1,10]）
+  bin_loss_weight: 50
+  # 缓存的 bin stats 文件名（落在 data_dir 下，n_bins/ground_bin_max_m/max_height 任一变了都会重新构建）
+  cache_filename: dpld_bin_edges.pt
+  # 当 ndsm_stats.pickle 不可用时的回退：uniform | none
+  #   uniform：构建均匀 bin + 均匀 prior（仅 sanity check）
+  #   none：直接报错（推荐 gbh_txt 训练时严格）
+  fallback: uniform
+  # bin_head 中间层通道压缩比；hidden = max(c_in // head_reduction, 32)
+  head_reduction: 2
+  # 是否用数据集先验初始化 bin_head 末层 Conv2d 的 bias
+  #   true（推荐）：bias = log(prior)，weight 缩放为 prior_init_scale，
+  #                 等价于「初始 softmax(logit) ≈ 数据集 bin 分布」，
+  #                 从而初始 h_pred ≈ E[h]（DFC23 上 ~2-3m），避免 ground 收敛缓慢
+  #   false：默认 Kaiming 初始化（早期 ground 像素会被预测成 ~10m）
+  prior_init: true
+  # weight 缩放系数：越小，初始预测越接近纯先验；越大，初始也带有空间差异
+  prior_init_scale: 0.05
+
+TBWH:
+  # ---- 数据集相关：三数据集各自的 bin 数与截断高度 ----
+  # dfc2019_512：99.9% 分位 ≤ 76 m，128 个均匀 bin
+  19_n_bins: 64
+  19_max_height: 76
+  # dfc2023_512：99.9% 分位 ≤ 81.5 m，128 个均匀 bin
+  23_n_bins: 64
+  23_max_height: 81.5
+  # VHG512：99.9% 分位 ≤ 20.5 m，64 个均匀 bin
+  vhg_n_bins: 16
+  vhg_max_height: 20.5
+
+  # ---- 共用超参 ----
+  # ground bin 上界（米）；[0, ground_bin_max_m] 单独作为 bin 0
+  ground_bin_max_m: 1.0
+  # 推理/训练：softmax top-k 档加权 bin center；同时「按序号最矮」前 k 个高度档压住 norm（见 partition_stair）
+  top_k: 3
+  # 按米边界 e[k]，h≤e[k]→pred_d=0。partition_stair=true：下一档映射 norm [0,0.5]，余档 [0.5,1]；false：h>e[k] 线性铺满 norm [0,1]
+  partition_stair: false
+  # false 时不加 KL(高斯软标签||p)，仅保留 focal bin 等其它项
+  constraint: true
+
+  # 高斯软标签的 sigma（米），bin center 米制空间下的高斯权重 σ
+  sigma_m: 1.5
+  # bin_head 中间层通道压缩比；hidden = max(c_in // head_reduction, 32)
+  head_reduction: 2
+  # 分布约束损失权重（KL(q_gauss ‖ p_pred)）
+  dist_loss_weight: 0.1
+  # bin 分类损失权重
+  bin_loss_weight: 50
+
+# ============================================================
+# FHRM — Frequency-aware Height Refinement Module
+# 启用：--use_FHRM 1（仅在与原版 DepthHead 路径组合时生效；use_HL / DPLD / TBWH / use_condition 时自动跳过）
+# 在 DepthHead 输出上做残差细化：低频内部一致性 + 高频边界 + warp 对齐；分割图引导加权。
+# ============================================================
+FHRM:
+  # 低通 AvgPool 核大小（正奇数）
+  lpf_kernel: 5
+  # flow 偏移幅度上限（像素）
+  max_offset: 1.0
+  # 三项残差全局权重初值（建议给小正值；0 时残差完全失效需要梯度推动 λ 增长，收敛慢）
+  lambda_l_init: 0.05
+  lambda_h_init: 0.05
+  lambda_w_init: 0.05
+  learnable_lambdas: true
+  # flow 头隐藏通道：max(C // flow_mid_ratio, 32)
+  flow_mid_ratio: 4
+  # 残差分支隐藏通道：max(C // residual_hidden_ratio, 16)
+  residual_hidden_ratio: 2
+  # 是否在输出侧将高度 clamp 到 [0, 1]（默认关闭：训练期 clamp 会切断 >1 区域梯度）
+  clamp_pred: false
+  # 是否对外部 segment_head 输出 detach，避免 depth_loss 经 FHRM 倒灌干扰分割头
+  detach_seg: true
+  # 是否使用 FHRM 内部 1×1 分割导引头替代外部 segment 概率（避免外部 SegmentHead 末尾 ReLU 导致的低区分度）
+  use_internal_gate: false
+  # 三路残差幅值上限（归一化高度空间，>0 时启用 max_resid · tanh(conv) 限幅；0 = 不限幅）
+  # 经验：高频/warp 容易 overfit 局部纹理，建议给 0.05 ~ 0.15；低频通常稳，默认不限幅
+  max_resid_l: 0.0
+  max_resid_h: 0.1
+  max_resid_w: 0.1
+  # H_base 辅助监督权重（loss += aux_base_weight · MSE(H_base, gt)），保证 base 不退化、便于对比 FHRM 增益
+  aux_base_weight: 0.1

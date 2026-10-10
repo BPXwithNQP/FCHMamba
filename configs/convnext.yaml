@@ -1,0 +1,11 @@
+# ConvNeXt V2 Nano；native_mode=true 时输出 [80,160,320,640]，false 时 1×1 对齐到 ResNet 通道
+# 主干 lr 见 backbone_lr；用 main-.py 且需 5e-5 时改为 5.0e-5
+name: convnext
+backbone_lr: 5.0e-5
+freeze: 10  # 训练初期冻结本主干参数的 epoch 数，0=不冻结
+model_path: models.convnextv2_backbone.ConvNeXtV2Backbone
+weights_path: convnextv2_nano_1k_224_ema.pt
+pretrained: true
+channel_align: true
+native_mode: false
+stage_channels: [80, 160, 320, 640]

@@ -4,17 +4,15 @@
 
 [中文说明](README.zh-CN.md) · [GitHub](https://github.com/BPXwithNQP/FCHMamba)
 
-**Qipei Nong**<sup>1,†</sup>, **Zhengpeng Li**<sup>2,†</sup>, **Zheng Gao**<sup>3</sup>, **Weichun Guan**<sup>1</sup>, **Shuxian Li**<sup>1</sup>, **Yifan Zhang**<sup>1</sup>, **Yuanyuan Zhang**<sup>1,*</sup>, **Jun Hu**<sup>2,*</sup>
+**Qipei Nong**<sup>1,†</sup>, **Zhengpeng Li**<sup>1,2,†</sup>, **Zheng Gao**<sup>3</sup>, **Weichun Guan**<sup>1</sup>, **Shuxian Li**<sup>1</sup>, **Yifan Zhang**<sup>1</sup>, **Yuanyuan Zhang**<sup>1,*</sup>, **Jun Hu**<sup>2,**</sup>
 
 <sup>1</sup> School of Computer Science and Software Engineering, University of Science and Technology Liaoning, Anshan, 114051, Liaoning, China  
 <sup>2</sup> School of Electronic and Information Engineering, University of Science and Technology Liaoning, Anshan, 114051, Liaoning, China  
 <sup>3</sup> School of Computer Science and Engineering, University of New South Wales, Sydney, NSW 2052, Australia
 
-<sup>†</sup> Equal contribution. <sup>*</sup> Corresponding authors: [Yuanyuan Zhang](mailto:yuanyuan@ustl.edu.cn) and [Jun Hu](mailto:320083700074@ustl.edu.cn).
+<sup>†</sup> Equal contribution. <sup>*</sup> Corresponding author. <sup>**</sup> Co-corresponding author.
 
-Zhengpeng Li's ORCID: [0000-0001-8345-1592](https://orcid.org/0000-0001-8345-1592).
-
-> **Code release:** Source code will be released upon acceptance of the paper. This repository currently provides a project overview and selected results; implementation and model weights are not yet available.
+Yuanyuan Zhang's ORCID: [0009-0003-7773-1856](https://orcid.org/0009-0003-7773-1856).
 
 ## Overview
 
@@ -31,6 +29,43 @@ Obtain the datasets through their official pages and follow the providers' terms
 | Vaihingen | [ISPRS Vaihingen dataset](https://www.isprs.org/resources/datasets/benchmarks/UrbanSemLab/2d-sem-label-vaihingen.aspx) |
 | DFC2019 Track 1 | [IEEE GRSS 2019 Data Fusion Contest](https://www.grss-ieee.org/community/technical-committees/2019-ieee-grss-data-fusion-contest/) |
 | DFC2023 Track 2 | [IEEE GRSS 2023 Data Fusion Contest](https://www.grss-ieee.org/community/technical-committees/2023-ieee-grss-data-fusion-contest/) |
+
+## Code and model weights
+
+The repository includes the FCHMamba model assembly, the three principal components used in the paper, dataset and evaluation utilities, and training/testing entry points.
+
+- `models/model.py`: FCHMamba model assembly and prediction heads.
+- `models/Blocks/RGHF.py`: stage-wise gated frequency compensation used by VM-FC.
+- `models/Blocks/DMSN.py`: directional deep-stream modeling.
+- `models/Blocks/GSFB.py`: gated multiscale skip fusion.
+- `configs/` and `models/Blocks/block.yaml`: backbone and module configurations.
+- `train_config/`: training configurations for Vaihingen, DFC2019, and DFC2023.
+- `train.py`, `test.py`, `utils/`, and `nqp_utils/`: training, evaluation, metrics, and profiling utilities.
+
+Download the trained FCHMamba weights from [Baidu Netdisk](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026) using extraction code `2026`.
+
+### Environment
+
+The code was developed for Python 3.10 and CUDA-enabled PyTorch. Install the supplied dependency sets according to the local CUDA environment:
+
+```bash
+pip install -r requirements_rest.txt
+pip install -r requirements_mambavision.txt
+```
+
+The state-space backbones require their corresponding selective-scan CUDA implementation. Adjust the dataset paths in `train_config/*.yaml` before running an experiment.
+
+### Training and evaluation
+
+```bash
+# Example: DFC2023 training
+python main.py --config train_config/dfc2023.yaml --dataset_root /path/to/datasets
+
+# Evaluation with a downloaded checkpoint
+python test.py --config train_config/dfc2023.yaml \
+  --ckpt_path /path/to/FCHMamba.ckpt \
+  --test_dir /path/to/test/data
+```
 
 ## Model comparison: RMSE on three benchmarks
 
@@ -128,9 +163,8 @@ The panels below reproduce the manuscript's comparisons. **Ours** denotes FCHMam
 
 ## Availability
 
-- **Source code:** To be released upon paper acceptance.
-- **Model weights:** Not currently available.
-- **Training and evaluation instructions:** To accompany the code release.
+- **Source code:** Available in this repository.
+- **Model weights:** [Baidu Netdisk](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026), extraction code `2026`.
 - **Paper and citation:** Publication information and a citation entry will be added when available.
 
 This repository does not redistribute the benchmark datasets. Dataset access and use remain subject to the respective providers' terms.
@@ -142,6 +176,10 @@ This work was supported by the National Natural Science Foundation of China (Gra
 ## Acknowledgements
 
 We thank DGPF for the Vaihingen data and the data providers and organizers of the IEEE GRSS 2019 and 2023 Data Fusion Contests.
+
+## License
+
+See [LICENSE](LICENSE) for the research-use terms and attribution requirements associated with the included FusedHE- and SegFormer-derived components.
 
 ## Contact
 
