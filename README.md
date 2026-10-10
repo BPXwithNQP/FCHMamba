@@ -32,11 +32,9 @@ Obtain the datasets through their official pages and follow the providers' terms
 
 ## Code and model weights
 
-The repository includes the FCHMamba model assembly, the three principal components used in the paper, dataset and evaluation utilities, and training/testing entry points.
+The repository includes the FCHMamba model assembly, configuration files, dataset and evaluation utilities, and training/testing entry points.
 
 - `models/model.py`: FCHMamba model assembly and prediction heads.
-- `models/Blocks/RGHF.py`: stage-wise gated frequency compensation used by VM-FC.
-- `models/Blocks/DMSN.py`: directional deep-stream modeling.
 - `models/Blocks/GSFB.py`: gated multiscale skip fusion.
 - `configs/` and `models/Blocks/block.yaml`: backbone and module configurations.
 - `train_config/`: training configurations for Vaihingen, DFC2019, and DFC2023.

@@ -32,11 +32,9 @@ FCHMamba 从单张 RGB 遥感影像预测稠密米制高程图，在单一 VMamb
 
 ## 代码与模型权重
 
-仓库包含 FCHMamba 的模型装配、论文中的三个核心模块、数据与评估工具，以及训练和测试入口。
+仓库包含 FCHMamba 的模型装配、配置文件、数据与评估工具，以及训练和测试入口。
 
 - `models/model.py`：FCHMamba 模型装配与预测头。
-- `models/Blocks/RGHF.py`：VM-FC 使用的分阶段门控频率补偿。
-- `models/Blocks/DMSN.py`：深层流方向建模。
 - `models/Blocks/GSFB.py`：门控多尺度跳跃融合。
 - `configs/` 与 `models/Blocks/block.yaml`：主干和模块配置。
 - `train_config/`：Vaihingen、DFC2019 和 DFC2023 的训练配置。
