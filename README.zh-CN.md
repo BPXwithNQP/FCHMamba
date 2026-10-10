@@ -40,7 +40,7 @@ FCHMamba 从单张 RGB 遥感影像预测稠密米制高程图，在单一 VMamb
 - `train_config/`：Vaihingen、DFC2019 和 DFC2023 的训练配置。
 - `train.py`、`test.py`、`utils/` 与 `nqp_utils/`：训练、评估、指标及模型统计工具。
 
-FCHMamba 训练权重可从[百度网盘](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026)下载，提取码：`2026`。
+FCHMamba 训练权重和主干预训练权重均可从[百度网盘](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026)下载，提取码：`2026`。训练或测试前，请在对应主干配置中设置 `weights_path`。
 
 ### 环境配置
 
@@ -162,7 +162,7 @@ HF/LF 是频率响应统计量，不是预测精度指标。上述统计使用�
 ## 发布状态
 
 - **源代码：** 已在本仓库提供。
-- **模型权重：** [百度网盘](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026)，提取码 `2026`。
+- **模型权重：** FCHMamba 训练权重和主干预训练权重均可从[百度网盘](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026)获取，提取码 `2026`。
 - **论文与引用：** 发表信息和引用条目将在可用时补充。
 
 本仓库不重新分发基准数据集，数据获取与使用遵循相应提供方的条款。

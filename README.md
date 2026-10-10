@@ -40,7 +40,7 @@ The repository includes the FCHMamba model assembly, configuration files, datase
 - `train_config/`: training configurations for Vaihingen, DFC2019, and DFC2023.
 - `train.py`, `test.py`, `utils/`, and `nqp_utils/`: training, evaluation, metrics, and profiling utilities.
 
-Download the trained FCHMamba weights from [Baidu Netdisk](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026) using extraction code `2026`.
+Download the trained FCHMamba checkpoints and pretrained backbone weights from [Baidu Netdisk](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026) using extraction code `2026`. Set the corresponding `weights_path` in the backbone configuration before training or evaluation.
 
 ### Environment
 
@@ -162,7 +162,7 @@ The panels below reproduce the manuscript's comparisons. **Ours** denotes FCHMam
 ## Availability
 
 - **Source code:** Available in this repository.
-- **Model weights:** [Baidu Netdisk](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026), extraction code `2026`.
+- **Model weights:** Trained FCHMamba checkpoints and pretrained backbone weights are available from [Baidu Netdisk](https://pan.baidu.com/s/1Ba6Yo-GnbK30OgYpWCxZtg?pwd=2026), extraction code `2026`.
 - **Paper and citation:** Publication information and a citation entry will be added when available.
 
 This repository does not redistribute the benchmark datasets. Dataset access and use remain subject to the respective providers' terms.
