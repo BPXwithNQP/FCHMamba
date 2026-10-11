@@ -56,13 +56,15 @@ The state-space backbones require their corresponding selective-scan CUDA implem
 ### Training and evaluation
 
 ```bash
-# Example: DFC2023 training
-python main.py --config train_config/dfc2023.yaml --dataset_root /path/to/datasets
+# DFC2023 training
+python main--.py --encoder1 tinyvim --enc_opt mit --dataset_root ../dataset \
+  --dataset_name dfc23-512 --max_height_eval 200 --epochs 150 --batch_size 4 \
+  --lr 5e-5 --progress_freq 1000 --de_normal --device cuda:0 \
+  --use_DMSN 1 --use_RGHF 1 --use_GSFB 1 --job_name FCHMamba_train
 
 # Evaluation with a downloaded checkpoint
-python test.py --config train_config/dfc2023.yaml \
-  --ckpt_path /path/to/FCHMamba.ckpt \
-  --test_dir /path/to/test/data
+python test.py --dataset_root ../dataset --dataset_name dfc23-512 \
+  --ckpt_path /path/to/FCHMamba.ckpt
 ```
 
 ## Model comparison: RMSE on three benchmarks

@@ -1,50 +1,24 @@
-job_name: vhg_convnext_gm_faf_gsfb
+job_name: FCHMamba_train
 
-enc_opt: fused
-encoder1: convnext
-encoder2: GroupMamba
-
-use_FAF: true
-faf_smooth_kernel: 3
-faf_lambda_res: 0.5
-faf_learnable_coef: true
-use_GSFB: 1
-
-option: full
-use_condition: false
-use_adabin: false
-de_normal: false
-lambd: 0.003
-
-lr: 3.0e-5
-encoder1_backbone_lr: 1.0e-5
-encoder2_backbone_lr: 5.0e-6
-batch_size: 4
-epochs: 150
-weight_decay: 5.0e-4
-clip_max_norm: 0.1
-cos_open: false
-num_workers: 4
-val_freq: 1
+encoder1: tinyvim
+enc_opt: mit
 
 dataset_layout: gbh_txt
-dataset_root: /path/to/datasets
+dataset_root: ../dataset
 dataset_name: VHG512
-data_dir: /path/to/datasets/VHG512
-data_split_dirs: /path/to/datasets/VHG512/data_split_dirs
-test_data_split_dirs:
-  - /path/to/datasets/VHG512/test_data_split_dirs
-max_height_eval: 50
-min_height_eval: 0.0001
-mask_depth_threshold: 1.0
-paper_building_min_m: 0.0
-gbh_require_blg: false
-gbh_normalize_rgb: false
+max_height_eval: 200
+
+epochs: 150
+batch_size: 4
+lr: 5.0e-5
+progress_freq: 1000
+de_normal: true
+device: cuda:0
+
+use_DMSN: 1
+use_RGHF: 1
+use_GSFB: 1
 
 output_dir: output
-device: cuda:0
-seed: 42
-profile_height: 512
-profile_width: 512
 save_model: true
 save_results: true
